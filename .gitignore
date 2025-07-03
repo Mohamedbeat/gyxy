@@ -1,1 +1,4 @@
 tmp
+rootCA.crt
+rootCA.key
+rootCA.pem
