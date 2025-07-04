@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/big"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -92,21 +91,6 @@ func (p *Proxy) readConnectRequest(reader *bufio.Reader) (string, error) {
 	}
 
 	return parts[1], nil
-}
-
-// Host Blocking Logic
-func (p *Proxy) checkAndBlockHost(client net.Conn, domain string) bool {
-	ok, err := p.checkHost(domain, client.RemoteAddr().String())
-	if err != nil {
-		p.Logger.Error("Host check failed", zap.Error(err))
-		return false
-	}
-
-	if !ok {
-		p.sendForbiddenResponse(client, domain)
-		return true
-	}
-	return false
 }
 
 func (p *Proxy) sendForbiddenResponse(client net.Conn, domain string) {
@@ -272,34 +256,5 @@ func (p *Proxy) readServerResponse(reader *bufio.Reader) (string, error) {
 		}
 	}
 	return response.String(), nil
-}
-
-// Host Checking
-func (p *Proxy) checkHost(host string, clientAddr string) (bool, error) {
-	file, err := os.Open("blocked")
-	if err != nil {
-		return false, fmt.Errorf("failed to open blocked file: %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		blockedHost := strings.TrimSpace(scanner.Text())
-		if blockedHost == "" {
-			continue
-		}
-		fmt.Printf("target: %s, unwanted %s\n", host, blockedHost)
-		if strings.EqualFold(host, blockedHost) {
-			p.Logger.Warn("Blocked host accessed",
-				zap.String("host", host),
-				zap.String("client", clientAddr))
-			return false, nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return false, fmt.Errorf("error reading blocked file: %w", err)
-	}
-	return true, nil
 }
 

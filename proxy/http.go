@@ -20,6 +20,9 @@ func (p *Proxy) handleHTTP(client net.Conn, reader *bufio.Reader) {
 		p.Logger.Error("Error parsing HTTP request", zap.Error(err))
 		return
 	}
+	if shouldBlock := p.checkAndBlockHost(client, req.Host); shouldBlock {
+		return
+	}
 
 	p.Logger.Info("HTTP request",
 		zap.String("method", req.Method),
